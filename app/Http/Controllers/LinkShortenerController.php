@@ -43,14 +43,16 @@ class LinkShortenerController extends Controller
     {
         $user = $request->user();
         $hash = $this->hash();
+        
+        Redis::setex($hash, 10, json_encode([
+            ...$request->all(), 
+            "short_link" => $hash
+        ]));
+
         if (!$user) {
-            Redis::setex($hash, 10, json_encode([
-                ...$request->all(), 
-                "short_link" => $hash
-            ]));
             return Redis::get($hash);
         }
-
+        
         $link = Link::create([
             'user_id' => $user->id,
             'long_link' => $request->long_link,
