@@ -9,9 +9,11 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class LinkShortenerController extends Controller
 {
+    private $app_url;
     public function __construct() {
         $this->middleware('jwt', ['except' => ['store', 'redirect']]);
         $this->middleware('validate', ['except' => ['index', 'show', 'redirect']]);
+        $this->app_url = url("/");
     }
     public function index(Request $request)
     {
@@ -46,7 +48,7 @@ class LinkShortenerController extends Controller
         
         Redis::setex($hash, 10, json_encode([
             ...$request->all(), 
-            "short_link" => $hash
+            "short_link" => $this->app_url."/api/".$hash
         ]));
 
         if (!$user) {
@@ -56,7 +58,7 @@ class LinkShortenerController extends Controller
         $link = Link::create([
             'user_id' => $user->id,
             'long_link' => $request->long_link,
-            'short_link' => $hash,
+            'short_link' => $this->app_url."/api/".$hash,
         ]);
         return $link;
     }
@@ -68,7 +70,7 @@ class LinkShortenerController extends Controller
         $link = Link::where(["id" => $id, "user_id" => $user->id])->update([
             ...$request->all(), 
             "user_id" => $user->id,
-            "short_link" => $hash
+            "short_link" => urlencode($this->app_url."/api/".$hash)
         ]);
         
         if (!$link) {
@@ -109,9 +111,14 @@ class LinkShortenerController extends Controller
                 "link" => $links->long_link,
                 "status" => true
             ]);
+        } else if (!$user && !$links){
+            return response()->json([
+                "message" => "link coudn't be found",
+                "status" => false
+            ], 404);
         }
 
-        $links = Link::where('short_link', $shortLink)->with(["userLink" => function($q) use ($user){
+        $links = Link::where('short_link', $this->app_url."/api/".$shortLink)->with(["userLink" => function($q) use ($user){
             $q->where('users.id', '=', $user->id);
         }])->get()->first();
 
