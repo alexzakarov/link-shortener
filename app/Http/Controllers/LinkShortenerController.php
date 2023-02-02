@@ -70,7 +70,7 @@ class LinkShortenerController extends Controller
         $link = Link::where(["id" => $id, "user_id" => $user->id])->update([
             ...$request->all(), 
             "user_id" => $user->id,
-            "short_link" => urlencode($this->app_url."/api/".$hash)
+            "short_link" => $this->app_url."/api/".$hash
         ]);
         
         if (!$link) {
